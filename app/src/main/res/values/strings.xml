@@ -1,0 +1,8 @@
+<resources>
+    <string name="accessibility_description">רק לבקשת שליחה פעילה: בדיקת מספר הנמען וטקסט ההודעה ב־WhatsApp שנבחר, ולחיצה אחת על שליחה. אם האימות אינו אפשרי, הפעולה נעצרת. אין איסוף שיחות או תוכן אחר. יש להפעיל רק אם מעוניינים בשליחה אוטומטית.</string>
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#087D70</item>
+    </style>
+</resources>
