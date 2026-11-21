@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
     private val permissions=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { revision++;feedback="ההרשאות עודכנו. אם הרשאה נדחתה, בדקו את הגדרות האפליקציה." }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                 MaterialTheme(colorScheme=lightColorScheme(primary=androidx.compose.ui.graphics.Color(0xFF087D70))) {
@@ -104,9 +105,9 @@ class MainActivity : ComponentActivity() {
         LazyColumn(Modifier.padding(padding).fillMaxSize().padding(horizontal=20.dp),verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=PaddingValues(vertical=20.dp)) {
             item {
                 Text("Whatsapp Auto replay",style=MaterialTheme.typography.headlineMedium)
-                if(!BuildConfig.AUTOMATION_AVAILABLE) Text("עותק אבחון נפרד ללא שירות נגישות. אין בו שליחה אוטומטית; הגרסה הראשית נשארת אוטומטית.",color=MaterialTheme.colorScheme.error)
+                if(!BuildConfig.AUTOMATION_AVAILABLE) Text("עותק אבחון נפרד ללא שירות נגישות: תמיכה ב־API ובשליחה ידנית. אין פתיחת נעילה או לחיצה אוטומטית ב־WhatsApp.",color=MaterialTheme.colorScheme.error)
                 Text("ניהול הודעות אחרי שיחות",style=MaterialTheme.typography.titleMedium)
-                Text("פרטי · נתונים נשמרים במכשיר בלבד",style=MaterialTheme.typography.bodySmall)
+                Text(if(current.delivery.mode==DeliveryMode.API) "מסלול Meta API · פרטי השליחה מועברים ל־Meta" else "מסלול טלפון · נתונים נשמרים במכשיר",style=MaterialTheme.typography.bodySmall)
             }
             item {
                 Card { Column(Modifier.padding(16.dp)) {
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
             }
             if(feedback.isNotBlank()) item { Text(feedback,color=MaterialTheme.colorScheme.primary) }
             if(tab==0) item {
+                if(current.delivery.mode==DeliveryMode.API) Text("מסלול API פעיל: נשלחת התבנית המאושרת מהגדרות המסלול. הטקסט החופשי והמתג של נגישות להלן שייכים למסלול הטלפון.",color=MaterialTheme.colorScheme.primary)
                 OutlinedTextField(message,{ message=it.take(2000) },Modifier.fillMaxWidth(),enabled=true,label={Text("הודעת התשובה")},minLines=5)
                 Toggle("WhatsApp Business (כבוי = WhatsApp רגיל)",business) {business=it}
                 if(BuildConfig.AUTOMATION_AVAILABLE) Toggle("שליחה אוטומטית באמצעות נגישות",auto) {auto=it}
@@ -144,9 +146,10 @@ class MainActivity : ComponentActivity() {
                 TemplatesEditor(templates) {startActivity(Intent(this@MainActivity,TemplateActivity::class.java))}
             }
             if(tab==3) item {
+                DeliveryEditor { revision++ }
                 HorizontalDivider()
                 Text("הרשאות ומצב",style=MaterialTheme.typography.titleLarge)
-                Text("יומן השיחות נחוץ לזיהוי סוג השיחה הסלולרית וסיומה. לא נדרשות הרשאת חיוג, קריאת SMS או גישה לאינטרנט.")
+                Text("יומן השיחות נחוץ לזיהוי סוג השיחה הסלולרית וסיומה. במסלול API נדרשת גישה לאינטרנט. אין קריאת SMS או חיוג.")
                 PermissionLine("יומן שיחות",Platform.granted(this@MainActivity,Manifest.permission.READ_CALL_LOG)) {permissions.launch(arrayOf(Manifest.permission.READ_CALL_LOG))}
                 if(Build.VERSION.SDK_INT>=31) {
                     Text("אימות חשבון SIM דורש הרשאת מספרי טלפון ב־Android 12 ומעלה, כדי להבחין בין שיחה סלולרית לשיחת VoIP. מספר ה־SIM עצמו אינו נשמר.",style=MaterialTheme.typography.bodySmall)
@@ -160,12 +163,12 @@ class MainActivity : ComponentActivity() {
                 if(contacts) PermissionLine("אנשי קשר — לסינון בלבד",Platform.granted(this@MainActivity,Manifest.permission.READ_CONTACTS)) { permissions.launch(arrayOf(Manifest.permission.READ_CONTACTS)) }
                 if(BuildConfig.AUTOMATION_AVAILABLE) {
                     PermissionLine("שירות נגישות מחובר",AccessibilityConnection.connected!=null) { settings(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS) }
-                    Text("נגישות מאפשרת לקרוא את המספר והטקסט המוצגים ב־WhatsApp שנבחר וללחוץ שליחה. היא אינה נדרשת למצב ידני. ב־Android 13 ומעלה ייתכן צורך ב׳אפשר הגדרות מוגבלות׳ במסך פרטי האפליקציה.",style=MaterialTheme.typography.bodySmall)
+                    Text("נגישות מאפשרת לאמת מספר וטקסט ב־WhatsApp וללחוץ שליחה. במסלול הניסיוני בלבד היא מזינה קוד במקלדת המערכת ונועלת מחדש. אינה נדרשת למסלול API. ב־Android 13 ומעלה ייתכן צורך ב׳אפשר הגדרות מוגבלות׳.",style=MaterialTheme.typography.bodySmall)
                 }
                 Text("WhatsApp שנבחר: "+if(Platform.installed(this@MainActivity,if(business) BUSINESS else WA)) "מותקן" else "אינו מותקן")
                 OutlinedButton(onClick={settings(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName"))}) {Text("פרטי אפליקציה והרשאות")}
                 OutlinedButton(onClick={settings(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)}) {Text("הגדרות חיסכון בסוללה")}
-                Text("גם לאחר שינוי חיסכון בסוללה אין הבטחה להפעלה ברקע בכל מכשיר. במסך נעול ממתינים להתראה; אין ניסיון לפתוח נעילה.",style=MaterialTheme.typography.bodySmall)
+                Text("חיסכון בסוללה עלול לעצור ניטור בכל המסלולים. מסלול הטלפון הרגיל ממתין לפתיחה ידנית; API אינו דורש פתיחה; המסלול הניסיוני תלוי בתמיכת מסך הנעילה במכשיר.",style=MaterialTheme.typography.bodySmall)
             }
             if(tab==3) item {
                 HorizontalDivider()
@@ -183,6 +186,7 @@ class MainActivity : ComponentActivity() {
                     Text(SimpleDateFormat("dd/MM/yyyy HH:mm:ss",Locale.forLanguageTag("he")).format(Date(entry.time)))
                     Text(entry.status,color=MaterialTheme.colorScheme.primary)
                     Text(entry.detail,style=MaterialTheme.typography.bodySmall)
+                    Text("מסלול: ${entry.mode.name} · בקשה: ${entry.requestId}",style=MaterialTheme.typography.bodySmall)
                     if(entry.status=="ממתין" && autoreplay.dispatcher.active?.entry?.id!=entry.id) Button(onClick={autoreplay.dispatcher.continueFromUser(entry.id,this@MainActivity);revision++},enabled=autoreplay.dispatcher.active==null) {Text("המשך לאחר פתיחת המכשיר")}
                     if(entry.manual) OutlinedButton(onClick={autoreplay.dispatcher.continueFromUser(entry.id,this@MainActivity,true);revision++},enabled=autoreplay.dispatcher.active==null) {Text("פתיחת הודעה לשליחה ידנית")}
                 } }

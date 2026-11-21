@@ -1,5 +1,5 @@
 <resources>
-    <string name="accessibility_description">רק לבקשת שליחה פעילה: בדיקת מספר הנמען וטקסט ההודעה ב־WhatsApp שנבחר, ולחיצה אחת על שליחה. אם האימות אינו אפשרי, הפעולה נעצרת. אין איסוף שיחות או תוכן אחר. יש להפעיל רק אם מעוניינים בשליחה אוטומטית.</string>
+    <string name="accessibility_description">אימות נמען וטקסט ולחיצה אחת על שליחה ב־WhatsApp. במצב פתיחה ניסיוני ובהסכמה נפרדת בלבד: קריאת מקלדת הקוד של המערכת, הזנת הקוד שנשמר במכשיר ונעילה מחדש. מסך לא מזוהה או כישלון עוצרים את הפעולה. מסלול API אינו דורש שירות זה.</string>
     <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>

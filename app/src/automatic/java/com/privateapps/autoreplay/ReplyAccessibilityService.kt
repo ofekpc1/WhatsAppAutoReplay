@@ -6,7 +6,8 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
 class ReplyAccessibilityService : AccessibilityService() {
-    override fun onServiceConnected() { AccessibilityConnection.connected=this }
+    private val unlock by lazy { ExperimentalUnlock(this) }
+    override fun onServiceConnected() { AccessibilityConnection.connected=this;UnlockConnection.driver=unlock;unlock.recover() }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val dispatch=autoreplay.dispatcher
         val a=dispatch.active ?: return
@@ -37,7 +38,8 @@ class ReplyAccessibilityService : AccessibilityService() {
             autoreplay.store.update(e.id,"הופעל ניסיון שליחה",if(clicked) "בוצעה לחיצה אחת על שליחה לאחר אימות; אין אישור מסירה"
                 else "פעולת הלחיצה לא אושרה; מצב השליחה אינו ודאי. לא יבוצע ניסיון חוזר")
         } catch(_: Exception) { autoreplay.store.update(e.id,"הופעל ניסיון שליחה","תקלה בזמן הלחיצה; מצב לא ודאי, ללא ניסיון חוזר") }
+        finally { dispatch.localAttemptFinished(e.id) }
     }
-    override fun onInterrupt() { autoreplay.dispatcher.active?.let { autoreplay.dispatcher.fail(it.entry.id,"שירות הנגישות הופרע; נדרש המשך ידני",true) } }
-    override fun onDestroy() { if(AccessibilityConnection.connected===this) AccessibilityConnection.connected=null;onInterrupt();super.onDestroy() }
+    override fun onInterrupt() { unlock.finish(false);autoreplay.dispatcher.active?.let { autoreplay.dispatcher.fail(it.entry.id,"שירות הנגישות הופרע; נדרש המשך ידני",true) } }
+    override fun onDestroy() { if(AccessibilityConnection.connected===this) AccessibilityConnection.connected=null;onInterrupt();if(UnlockConnection.driver===unlock) UnlockConnection.driver=null;super.onDestroy() }
 }

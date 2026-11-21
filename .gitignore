@@ -13,3 +13,5 @@ Thumbs.db
 keystore.properties
 __pycache__/
 *.pyc
+*.log
+outputs/

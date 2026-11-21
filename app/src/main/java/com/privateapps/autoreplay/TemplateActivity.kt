@@ -38,6 +38,7 @@ class TemplateActivity: ComponentActivity() {
         }
     }
     private fun send(raw: String,text: String) {
+        if(autoreplay.store.settings().delivery.mode==DeliveryMode.API) {feedback="מסלול API שולח תבנית Meta מאושרת בלבד. שליחת נוסח מקומי זמינה במסלול הטלפון.";return}
         val number=Numbers.normalize(raw) ?: return
         if(busy || autoreplay.dispatcher.active!=null) {feedback="קיימת בקשת שליחה פעילה";return}
         busy=true
