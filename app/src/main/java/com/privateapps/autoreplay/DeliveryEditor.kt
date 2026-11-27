@@ -11,7 +11,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
-@Composable fun DeliveryEditor(onSaved: () -> Unit) {
+@Composable fun DeliveryEditor(onDirty: (Boolean) -> Unit = {}, onSaved: () -> Unit) {
     val context=LocalContext.current
     val store=context.autoreplay.store
     val secrets=remember { DeviceSecrets(context) }
@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
     var token by remember { mutableStateOf("") }
     var consent by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf("") }
+    SideEffect { onDirty(config != store.settings().delivery || pin.isNotEmpty() || token.isNotEmpty() || consent) }
+    DisposableEffect(Unit) { onDispose { onDirty(false) } }
     Text("מסלול השליחה",style=MaterialTheme.typography.titleLarge)
     listOf(DeliveryMode.PHONE to "דרך הטלפון — המצב הקיים", DeliveryMode.UNLOCK to "פתיחה ושליחה — ניסיוני", DeliveryMode.API to "Meta API — גם בטלפון נעול").forEach { (mode,label) ->
         Row(Modifier.fillMaxWidth()) {

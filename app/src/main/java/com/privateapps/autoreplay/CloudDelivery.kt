@@ -56,6 +56,8 @@ class CloudClient(private val open: (URL) -> HttpsURLConnection = { it.openConne
 }
 
 class CloudDelivery(private val context: Context, private val store: Store) {
+    private var activeRequests = 0
+    val busy: Boolean get() = activeRequests > 0
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     fun send(e: Entry) {
         if(e.mode!=DeliveryMode.API || e.status!="ממתין") return
@@ -66,10 +68,13 @@ class CloudDelivery(private val context: Context, private val store: Store) {
         }
         // Persist the attempt BEFORE network I/O. Never retry an ambiguous POST or switch routes.
         if(!store.claim(e.id)) return
+        activeRequests++
         scope.launch {
+            try {
             val result=withContext(Dispatchers.IO) { CloudClient().send(config,e.number,token) }
             store.update(e.id,result.state,result.detail)
             if(result.state!="התקבל ב־Meta") Notices.attention(context,e.id,result.detail)
+            } finally { activeRequests-- }
         }
     }
 }

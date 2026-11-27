@@ -15,3 +15,6 @@ __pycache__/
 *.pyc
 *.log
 outputs/
+
+/artifacts/
+/.local/

@@ -27,11 +27,16 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : ComponentActivity() {
+    private lateinit var updates: AppUpdates
+    private var hasUnsavedChanges = false
+    private var deliveryDirty by mutableStateOf(false)
+    private fun mayInstallUpdate() = !hasUnsavedChanges && !deliveryDirty && !autoreplay.store.settings().enabled && !autoreplay.dispatcher.busy
     private var feedback by mutableStateOf("")
     private var revision by mutableIntStateOf(0)
     private val permissions=registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { revision++;feedback="ההרשאות עודכנו. אם הרשאה נדחתה, בדקו את הגדרות האפליקציה." }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        updates = AppUpdates(this, lifecycleScope, ::mayInstallUpdate)
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -41,7 +46,9 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    override fun onResume() { super.onResume();revision++ }
+    override fun onResume() { super.onResume();revision++;updates.resumed() }
+    override fun onPause() { updates.paused();super.onPause() }
+    override fun onDestroy() { updates.close();super.onDestroy() }
     private fun settings(action: String, data: Uri?=null) {
         runCatching { startActivity(Intent(action,data)) }.onFailure { feedback="מסך ההגדרות אינו זמין במכשיר זה" }
     }
@@ -97,6 +104,7 @@ class MainActivity : ComponentActivity() {
         var rules by remember { mutableStateOf(current.rules) }
         var number by remember { mutableStateOf("") }
         val dirty=rules!=current.rules || message!=current.message || business!=(current.pkg==BUSINESS) || auto!=current.auto || contacts!=current.excludeContacts
+        SideEffect { hasUnsavedChanges = dirty }
         var tab by remember { mutableIntStateOf(0) }
         val tabs=listOf("הודעות","תבניות","היסטוריה","הגדרות")
         Scaffold(bottomBar={
@@ -117,6 +125,7 @@ class MainActivity : ComponentActivity() {
                     Text("לאחר הפעלה מחדש או עצירת האפליקציה יש להפעיל שוב. אין טיפול בשיחות WhatsApp או בשיחה ממתינה.",style=MaterialTheme.typography.bodySmall)
                 } }
             }
+            if(tab==0 || tab==3) item { UpdateCard(updates, !dirty && !deliveryDirty && !current.enabled && !autoreplay.dispatcher.busy) }
             if(feedback.isNotBlank()) item { Text(feedback,color=MaterialTheme.colorScheme.primary) }
             if(tab==0) item {
                 if(current.delivery.mode==DeliveryMode.API) Text("מסלול API פעיל: נשלחת התבנית המאושרת מהגדרות המסלול. הטקסט החופשי והמתג של נגישות להלן שייכים למסלול הטלפון.",color=MaterialTheme.colorScheme.primary)
@@ -146,7 +155,7 @@ class MainActivity : ComponentActivity() {
                 TemplatesEditor(templates) {startActivity(Intent(this@MainActivity,TemplateActivity::class.java))}
             }
             if(tab==3) item {
-                DeliveryEditor { revision++ }
+                DeliveryEditor(onDirty = { deliveryDirty = it }) { revision++ }
                 HorizontalDivider()
                 Text("הרשאות ומצב",style=MaterialTheme.typography.titleLarge)
                 Text("יומן השיחות נחוץ לזיהוי סוג השיחה הסלולרית וסיומה. במסלול API נדרשת גישה לאינטרנט. אין קריאת SMS או חיוג.")

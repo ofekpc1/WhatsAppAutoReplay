@@ -9,6 +9,7 @@ data class ActiveReply(val entry: Entry, val started: Long, val deadline: Long)
 object AccessibilityConnection { var connected: Context? = null }
 class ReplyDispatcher(private val context: Context, private val store: Store) {
     private val cloud=CloudDelivery(context,store)
+    val busy: Boolean get() = active != null || cloud.busy || UnlockConnection.driver?.busy == true
     private val handler=Handler(Looper.getMainLooper())
     var active: ActiveReply? = null
         private set
